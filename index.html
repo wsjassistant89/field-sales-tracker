@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Field Sales Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1117; --surface: #161b22; --surface2: #21262d; --border: #30363d;
+    --accent: #00e5a0; --accent2: #0099ff; --danger: #ff6b6b; --warn: #ffa94d;
+    --text: #e6edf3; --muted: #7d8590; --radius: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; padding-bottom: 40px; }
+  .header { background: linear-gradient(135deg, #0d1117 0%, #161b22 100%); border-bottom: 1px solid var(--border); padding: 16px 20px 14px; position: sticky; top: 0; z-index: 100; }
+  .header-top { display: flex; justify-content: space-between; align-items: center; }
+  .header h1 { font-family: 'Space Mono', monospace; font-size: 15px; font-weight: 700; color: var(--accent); letter-spacing: -0.5px; }
+  .header .date { font-size: 11px; color: var(--muted); font-family: 'Space Mono', monospace; }
+  .header .location { font-size: 11px; color: var(--muted); margin-top: 3px; display: flex; align-items: center; gap: 4px; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(0.8)} }
+  .tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 12px; }
+  .tab { flex: 1; padding: 12px 8px; font-size: 12px; font-weight: 600; text-align: center; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; transition: all 0.2s; }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .panel { display: none; padding: 16px; }
+  .panel.active { display: block; }
+  .form-group { margin-bottom: 14px; }
+  label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+  input, textarea { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; padding: 10px 12px; outline: none; appearance: none; transition: border-color 0.2s; }
+  input:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,229,160,0.08); }
+  textarea { resize: vertical; min-height: 72px; }
+  .btn { width: 100%; padding: 13px; border-radius: var(--radius); border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; transition: all 0.2s; }
+  .btn-primary { background: var(--accent); color: #0d1117; }
+  .btn-primary:active { transform: scale(0.98); background: #00c98a; }
+  .visits-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .visits-header h2 { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; }
+  .count-badge { background: var(--accent); color: #0d1117; border-radius: 20px; padding: 2px 9px; font-size: 12px; font-weight: 700; font-family: 'Space Mono', monospace; }
+  .visit-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 13px 14px; margin-bottom: 10px; position: relative; }
+  .card-top { display: flex; justify-content: space-between; align-items: flex-start; }
+  .card-company { font-size: 14px; font-weight: 600; color: var(--text); }
+  .card-date { font-size: 12px; color: var(--accent); margin-top: 2px; font-family: 'Space Mono', monospace; }
+  .card-divider { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
+  .card-row { display: flex; gap: 8px; margin-bottom: 6px; align-items: flex-start; }
+  .card-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; min-width: 60px; padding-top: 1px; }
+  .card-val { font-size: 12px; color: var(--text); flex: 1; line-height: 1.4; }
+  .card-delete { position: absolute; top: 10px; right: 10px; background: none; border: none; color: var(--muted); font-size: 16px; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
+  .time-chip { font-size: 10px; font-family: 'Space Mono', monospace; color: var(--muted); margin-top: 8px; }
+  .empty-state { text-align: center; padding: 48px 20px; color: var(--muted); }
+  .empty-icon { font-size: 36px; margin-bottom: 12px; }
+  .empty-state p { font-size: 13px; line-height: 1.6; }
+  .summary-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
+  .stat { background: var(--surface2); border-radius: 8px; padding: 12px 10px; text-align: center; }
+  .stat-val { font-family: 'Space Mono', monospace; font-size: 20px; font-weight: 700; color: var(--accent); display: block; }
+  .stat-lbl { font-size: 10px; color: var(--muted); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .summary-box { background: var(--surface); border: 1px solid var(--accent); border-radius: var(--radius); padding: 16px; margin-bottom: 14px; }
+  .wa-preview { background: #075e54; border-radius: var(--radius); padding: 14px; font-family: 'DM Sans', sans-serif; font-size: 13px; line-height: 1.6; color: #e9fbe5; white-space: pre-wrap; word-break: break-word; min-height: 100px; border: none; width: 100%; resize: none; }
+  .copy-btn { width: 100%; padding: 13px; background: #25d366; color: #fff; border: none; border-radius: var(--radius); font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 10px; transition: all 0.2s; }
+  .copy-btn.copied { background: #128c7e; }
+  .section-title { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; }
+  .clear-btn { width: 100%; padding: 11px; background: transparent; border: 1px solid rgba(255,107,107,0.3); border-radius: var(--radius); color: var(--danger); font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 10px; font-family: 'DM Sans', sans-serif; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-top"><h1>⚡ FIELD SALES TRACKER</h1><span class="date" id="dateDisplay"></span></div>
+  <div class="location"><div class="dot"></div>Pasir Panjang Wholesale Centre</div>
+</div>
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('log')">📝 Log Visit</div>
+  <div class="tab" onclick="switchTab('visits')">📋 Visits <span id="visitTabCount"></span></div>
+  <div class="tab" onclick="switchTab('report')">📤 Report</div>
+</div>
+
+<!-- LOG VISIT -->
+<div class="panel active" id="panel-log">
+  <div class="form-group"><label>Visit Date *</label><input type="date" id="visitDate"></div>
+  <div class="form-group"><label>Company Name *</label><input type="text" id="company" placeholder="e.g. Sunrise Trading Pte Ltd" autocomplete="off"></div>
+  <div class="form-group"><label>Target Start Date</label><input type="date" id="targetStartDate"></div>
+  <div class="form-group"><label>Closing Date</label><input type="date" id="closingDate"></div>
+  <div class="form-group"><label>Follow-up Actions</label><textarea id="followup" placeholder="e.g. Send product catalogue, call back Mon 3pm, arrange demo..."></textarea></div>
+  <div class="form-group"><label>Notes / Remarks</label><textarea id="notes" placeholder="Any additional notes from the visit..."></textarea></div>
+  <button class="btn btn-primary" onclick="addVisit()">＋ Add Visit</button>
+</div>
+
+<!-- VISITS LIST -->
+<div class="panel" id="panel-visits">
+  <div class="visits-header"><h2>Today's Visits</h2><span class="count-badge" id="visitCount">0</span></div>
+  <div id="visitsList"><div class="empty-state"><div class="empty-icon">🗺️</div><p>No visits logged yet.<br>Head to <strong>Log Visit</strong> to add your first customer.</p></div></div>
+</div>
+
+<!-- REPORT -->
+<div class="panel" id="panel-report">
+  <div class="summary-stats">
+    <div class="stat"><span class="stat-val" id="statTotal">0</span><div class="stat-lbl">Visits</div></div>
+    <div class="stat"><span class="stat-val" id="statFollowup">0</span><div class="stat-lbl">Follow-ups</div></div>
+  </div>
+  <div class="section-title">WhatsApp Summary</div>
+  <div class="summary-box"><textarea class="wa-preview" id="waPreview" rows="14" readonly></textarea></div>
+  <button class="copy-btn" id="copyBtn" onclick="copyMessage()">📋 Copy & Share on WhatsApp</button>
+  <button class="clear-btn" onclick="clearAll()">🗑️ Clear All Visits (New Day)</button>
+</div>
+
+<script>
+  let visits = JSON.parse(localStorage.getItem('ppVisits')||'[]');
+  const now = new Date();
+  document.getElementById('dateDisplay').textContent = now.toLocaleDateString('en-SG',{day:'numeric',month:'short',year:'numeric',weekday:'short'});
+  document.getElementById('visitDate').value = now.toISOString().split('T')[0];
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    const tabs=['log','visits','report'];
+    document.querySelectorAll('.tab')[tabs.indexOf(tab)].classList.add('active');
+    document.getElementById('panel-'+tab).classList.add('active');
+    if(tab==='report') buildReport();
+    if(tab==='visits') renderVisits();
+  }
+
+  function addVisit() {
+    const company = document.getElementById('company').value.trim();
+    const visitDate = document.getElementById('visitDate').value;
+    if(!company){alert('Please enter a company name.');return;}
+    if(!visitDate){alert('Please select a visit date.');return;}
+    const visit = {
+      id: Date.now(),
+      time: new Date().toLocaleTimeString('en-SG',{hour:'2-digit',minute:'2-digit'}),
+      visitDate,
+      company,
+      targetStartDate: document.getElementById('targetStartDate').value,
+      closingDate: document.getElementById('closingDate').value,
+      followup: document.getElementById('followup').value.trim(),
+      notes: document.getElementById('notes').value.trim()
+    };
+    visits.push(visit); save(); resetForm(); updateBadge(); alert('✅ Visit logged: '+company);
+  }
+
+  function resetForm() {
+    document.getElementById('company').value='';
+    document.getElementById('targetStartDate').value='';
+    document.getElementById('closingDate').value='';
+    document.getElementById('followup').value='';
+    document.getElementById('notes').value='';
+    document.getElementById('visitDate').value = new Date().toISOString().split('T')[0];
+  }
+
+  function save(){localStorage.setItem('ppVisits',JSON.stringify(visits));updateBadge();}
+  function updateBadge(){const n=visits.length;document.getElementById('visitCount').textContent=n;document.getElementById('visitTabCount').textContent=n>0?`(${n})`:''; }
+  function deleteVisit(id){if(!confirm('Remove this visit?'))return;visits=visits.filter(v=>v.id!==id);save();renderVisits();}
+
+  function formatDate(d){
+    if(!d)return'—';
+    const[y,m,day]=d.split('-');
+    return new Date(y,m-1,day).toLocaleDateString('en-SG',{day:'numeric',month:'short',year:'numeric'});
+  }
+
+  function renderVisits(){
+    const el=document.getElementById('visitsList');
+    if(!visits.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">🗺️</div><p>No visits logged yet.<br>Head to <strong>Log Visit</strong> to add your first customer.</p></div>';return;}
+    el.innerHTML=visits.slice().reverse().map(v=>`
+      <div class="visit-card">
+        <button class="card-delete" onclick="deleteVisit(${v.id})">✕</button>
+        <div class="card-top">
+          <div>
+            <div class="card-company">${v.company}</div>
+            <div class="card-date">📅 ${formatDate(v.visitDate)}</div>
+          </div>
+        </div>
+        <hr class="card-divider">
+        ${v.targetStartDate?`<div class="card-row"><span class="card-label">Start</span><span class="card-val">${formatDate(v.targetStartDate)}</span></div>`:''}
+        ${v.closingDate?`<div class="card-row"><span class="card-label">Closing</span><span class="card-val">${formatDate(v.closingDate)}</span></div>`:''}
+        ${v.followup?`<div class="card-row"><span class="card-label">Follow-up</span><span class="card-val">${v.followup}</span></div>`:''}
+        ${v.notes?`<div class="card-row"><span class="card-label">Notes</span><span class="card-val">${v.notes}</span></div>`:''}
+        <div class="time-chip">⏱ Logged at ${v.time}</div>
+      </div>`).join('');
+  }
+
+  function buildReport(){
+    const total=visits.length;
+    const followups=visits.filter(v=>v.followup).length;
+    document.getElementById('statTotal').textContent=total;
+    document.getElementById('statFollowup').textContent=followups;
+    const dateStr=now.toLocaleDateString('en-SG',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+    let msg=`📊 *DAILY SALES REPORT*\n📅 ${dateStr}\n📍 Pasir Panjang Wholesale Centre\n${'─'.repeat(30)}\n\n✅ *Visits Today: ${total}*\n\n`;
+    if(!total){msg+='No visits logged today.\n';}
+    else{
+      visits.forEach((v,i)=>{
+        msg+=`*${i+1}. ${v.company}*\n`;
+        msg+=`   📅 Visit Date: ${formatDate(v.visitDate)}\n`;
+        if(v.targetStartDate)msg+=`   🎯 Target Start: ${formatDate(v.targetStartDate)}\n`;
+        if(v.closingDate)msg+=`   🔒 Closing Date: ${formatDate(v.closingDate)}\n`;
+        if(v.followup)msg+=`   📋 Follow-up: ${v.followup}\n`;
+        if(v.notes)msg+=`   📝 ${v.notes}\n`;
+        msg+='\n';
+      });
+    }
+    msg+=`${'─'.repeat(30)}\n_Sent via Field Sales Tracker_`;
+    document.getElementById('waPreview').value=msg;
+  }
+
+  function copyMessage(){
+    const msg=document.getElementById('waPreview').value;
+    if(!msg)return;
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(msg).then(()=>showCopied());}
+    else{document.getElementById('waPreview').select();document.execCommand('copy');showCopied();}
+  }
+
+  function showCopied(){
+    const btn=document.getElementById('copyBtn');
+    btn.textContent='✅ Copied! Now open WhatsApp & paste';
+    btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent='📋 Copy & Share on WhatsApp';btn.classList.remove('copied');},3000);
+  }
+
+  function clearAll(){
+    if(!confirm('Clear all visits and start a new day? This cannot be undone.'))return;
+    visits=[];save();renderVisits();buildReport();
+  }
+
+  updateBadge(); renderVisits();
+</script>
+</body>
+</html>
