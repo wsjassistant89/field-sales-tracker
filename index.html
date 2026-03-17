@@ -76,6 +76,7 @@
 <div class="panel active" id="panel-log">
   <div class="form-group"><label>Visit Date *</label><input type="date" id="visitDate"></div>
   <div class="form-group"><label>Company Name *</label><input type="text" id="company" placeholder="e.g. Sunrise Trading Pte Ltd" autocomplete="off"></div>
+  <div class="form-group"><label>Deal Value (SGD)</label><input type="number" id="dealValue" placeholder="e.g. 5000" min="0" step="0.01"></div>
   <div class="form-group"><label>Target Start Date</label><input type="date" id="targetStartDate"></div>
   <div class="form-group"><label>Closing Date</label><input type="date" id="closingDate"></div>
   <div class="form-group"><label>Follow-up Actions</label><textarea id="followup" placeholder="e.g. Send product catalogue, call back Mon 3pm, arrange demo..."></textarea></div>
@@ -94,6 +95,7 @@
   <div class="summary-stats">
     <div class="stat"><span class="stat-val" id="statTotal">0</span><div class="stat-lbl">Visits</div></div>
     <div class="stat"><span class="stat-val" id="statFollowup">0</span><div class="stat-lbl">Follow-ups</div></div>
+    <div class="stat" style="grid-column:span 2"><span class="stat-val" id="statPipeline" style="font-size:16px">$0</span><div class="stat-lbl">Total Pipeline Value</div></div>
   </div>
   <div class="section-title">WhatsApp Summary</div>
   <div class="summary-box"><textarea class="wa-preview" id="waPreview" rows="14" readonly></textarea></div>
@@ -127,6 +129,7 @@
       time: new Date().toLocaleTimeString('en-SG',{hour:'2-digit',minute:'2-digit'}),
       visitDate,
       company,
+      dealValue: document.getElementById('dealValue').value.trim(),
       targetStartDate: document.getElementById('targetStartDate').value,
       closingDate: document.getElementById('closingDate').value,
       followup: document.getElementById('followup').value.trim(),
@@ -137,6 +140,7 @@
 
   function resetForm() {
     document.getElementById('company').value='';
+    document.getElementById('dealValue').value='';
     document.getElementById('targetStartDate').value='';
     document.getElementById('closingDate').value='';
     document.getElementById('followup').value='';
@@ -167,6 +171,7 @@
           </div>
         </div>
         <hr class="card-divider">
+        ${v.dealValue?`<div class="card-row"><span class="card-label">Deal</span><span class="card-val" style="color:var(--accent);font-weight:600;">$${Number(v.dealValue).toLocaleString('en-SG')}</span></div>`:''}
         ${v.targetStartDate?`<div class="card-row"><span class="card-label">Start</span><span class="card-val">${formatDate(v.targetStartDate)}</span></div>`:''}
         ${v.closingDate?`<div class="card-row"><span class="card-label">Closing</span><span class="card-val">${formatDate(v.closingDate)}</span></div>`:''}
         ${v.followup?`<div class="card-row"><span class="card-label">Follow-up</span><span class="card-val">${v.followup}</span></div>`:''}
@@ -178,8 +183,10 @@
   function buildReport(){
     const total=visits.length;
     const followups=visits.filter(v=>v.followup).length;
+    const pipeline=visits.reduce((sum,v)=>sum+(parseFloat(v.dealValue)||0),0);
     document.getElementById('statTotal').textContent=total;
     document.getElementById('statFollowup').textContent=followups;
+    document.getElementById('statPipeline').textContent='$'+pipeline.toLocaleString('en-SG',{minimumFractionDigits:0,maximumFractionDigits:2});
     const dateStr=now.toLocaleDateString('en-SG',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
     let msg=`📊 *DAILY SALES REPORT*\n📅 ${dateStr}\n📍 Pasir Panjang Wholesale Centre\n${'─'.repeat(30)}\n\n✅ *Visits Today: ${total}*\n\n`;
     if(!total){msg+='No visits logged today.\n';}
@@ -187,6 +194,7 @@
       visits.forEach((v,i)=>{
         msg+=`*${i+1}. ${v.company}*\n`;
         msg+=`   📅 Visit Date: ${formatDate(v.visitDate)}\n`;
+        if(v.dealValue)msg+=`   💰 Deal Value: $${Number(v.dealValue).toLocaleString('en-SG')}\n`;
         if(v.targetStartDate)msg+=`   🎯 Target Start: ${formatDate(v.targetStartDate)}\n`;
         if(v.closingDate)msg+=`   🔒 Closing Date: ${formatDate(v.closingDate)}\n`;
         if(v.followup)msg+=`   📋 Follow-up: ${v.followup}\n`;
@@ -194,6 +202,7 @@
         msg+='\n';
       });
     }
+    if(pipeline>0)msg+=`💰 *Total Pipeline: $${pipeline.toLocaleString('en-SG',{minimumFractionDigits:0,maximumFractionDigits:2})}*\n`;
     msg+=`${'─'.repeat(30)}\n_Sent via Field Sales Tracker_`;
     document.getElementById('waPreview').value=msg;
   }
